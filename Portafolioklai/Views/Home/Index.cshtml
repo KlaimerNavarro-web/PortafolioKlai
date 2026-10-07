@@ -1,0 +1,220 @@
+﻿@model Portafolioklai.Models.PortafolioViewModel
+
+@{
+    ViewData["Title"] = "Portafolio 3D";
+}
+
+<!-- CSS Personalizado para la experiencia 3D -->
+<style>
+    body, html {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow-x: hidden;
+        background-color: #0b0f19;
+        color: #ffffff;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    #canvas-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 1;
+        pointer-events: none; /* Permite interactuar con la interfaz superior */
+    }
+
+    .content-overlay {
+        position: relative;
+        z-index: 2;
+        padding: 4rem 2rem;
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+
+    .glass-card {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+
+    .glass-card:hover {
+        transform: translateY(-5px);
+        border-color: rgba(0, 212, 255, 0.4);
+    }
+
+    .profile-img {
+        width: 140px;
+        height: 140px;
+        object-fit: cover;
+        border-radius: 50%;
+        border: 3px solid #00d4ff;
+        box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+    }
+
+    .tech-tag {
+        display: inline-block;
+        background: rgba(0, 212, 255, 0.15);
+        color: #00d4ff;
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        margin-right: 0.5rem;
+        margin-top: 0.5rem;
+    }
+</style>
+
+<!-- Canvas 3D de Fondo -->
+<div id="canvas-container"></div>
+
+<!-- Capa de Contenido de tu Portafolio -->
+<div class="content-overlay">
+    <!-- Sección Sobre Mí -->
+    <div class="glass-card text-center">
+        <img src="@Model.FotoPerfil" alt="@Model.Nombre" class="profile-img mb-3" onerror="this.src='https://via.placeholder.com/140';" />
+        <h1 class="display-4 font-weight-bold">@Model.Nombre</h1>
+        <p class="h5 text-info mb-3">@Model.TituloProfesional</p>
+        <p class="lead text-light">@Model.Biografia</p>
+    </div>
+
+    <!-- Sección de Proyectos -->
+    <h2 class="mb-4 text-center">Proyectos Destacados</h2>
+    <div class="row">
+        @foreach (var proyecto in Model.Proyectos)
+        {
+            <div class="col-md-6 mb-4">
+                <div class="glass-card h-100 d-flex flex-column justify-content-between overflow-hidden p-0">
+                    <!-- Imagen del Proyecto -->
+                    <div style="height: 200px; overflow: hidden; background: rgba(0,0,0,0.3);">
+                        <img src="@proyecto.ImagenUrl" alt="@proyecto.Titulo" class="w-100 h-100" style="object-fit: cover;" onerror="this.src='https://via.placeholder.com/400x200?text=Proyecto';" />
+                    </div>
+
+                    <!-- Contenido de la Tarjeta -->
+                    <div class="p-4 d-flex flex-column flex-grow-1 justify-content-between">
+                        <div>
+                            <h3 class="h4 font-weight-bold mb-2">@proyecto.Titulo</h3>
+                            <p class="text-light opacity-75">@proyecto.Descripcion</p>
+                        </div>
+
+                        <div class="mt-3">
+                            <div class="mb-3">
+                                <span class="tech-tag">@proyecto.Tecnologias</span>
+                            </div>
+                            <a href="@proyecto.EnlaceRepo" target="_blank" class="btn btn-sm btn-outline-info w-100">
+                                Ver Repositorio en GitHub
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Sección de Contacto -->
+    <div class="glass-card mt-4 text-center">
+        <h2>Contacto</h2>
+        <p>¿Interesado en colaborar o contratarme?</p>
+        <a href="mailto:@Model.Email" class="btn btn-outline-info btn-lg m-2">Enviar Email</a>
+        <a href="@Model.GitHub" target="_blank" class="btn btn-outline-light btn-lg m-2">GitHub</a>
+        <a href="@Model.LinkedIn" target="_blank" class="btn btn-outline-primary btn-lg m-2">LinkedIn</a>
+    </div>
+</div>
+
+<!-- Scripts de Three.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+    // Inicialización del Escenario 3D
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    container.appendChild(renderer.domElement);
+
+    // Creación de una Geometría 3D Interactiva (Icosaedro/Núcleo)
+    const geometry = new THREE.IcosahedronGeometry(2, 1);
+    const material = new THREE.MeshPhongMaterial({
+        color: 0x00d4ff,
+        wireframe: true,
+        wireframeLinewidth: 2
+    });
+    const cube = new THREE.Mesh(geometry, material);
+    scene.add(cube);
+
+    // Campo de Partículas en 3D
+    const particlesGeometry = new THREE.BufferGeometry();
+    const particlesCount = 700;
+    const posArray = new Float32Array(particlesCount * 3);
+
+    for (let i = 0; i < particlesCount * 3; i++) {
+        posArray[i] = (Math.random() - 0.5) * 15;
+    }
+
+    particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+    const particlesMaterial = new THREE.PointsMaterial({
+        size: 0.03,
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.8
+    });
+
+    const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+    scene.add(particlesMesh);
+
+    // Iluminación
+    const pointLight = new THREE.PointLight(0xffffff, 1);
+    pointLight.position.set(5, 5, 5);
+    scene.add(pointLight);
+
+    const ambientLight = new THREE.AmbientLight(0x404040, 2);
+    scene.add(ambientLight);
+
+    camera.position.z = 5;
+
+    // Animación interactiva basada en la posición del ratón
+    let mouseX = 0;
+    let mouseY = 0;
+
+    document.addEventListener('mousemove', (event) => {
+        mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+        mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+    });
+
+    // Bucle de Renderizado
+    function animate() {
+        requestAnimationFrame(animate);
+
+        // Rotación continua del objeto 3D
+        cube.rotation.x += 0.003;
+        cube.rotation.y += 0.005;
+
+        particlesMesh.rotation.y = -mouseX * 0.2;
+        particlesMesh.rotation.x = mouseY * 0.2;
+
+        // Reacción suave al mouse
+        cube.position.x += (mouseX * 0.5 - cube.position.x) * 0.05;
+        cube.position.y += (mouseY * 0.5 - cube.position.y) * 0.05;
+
+        renderer.render(scene, camera);
+    }
+
+    animate();
+
+    // Ajuste dinámico de pantalla (Responsive)
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+</script>
